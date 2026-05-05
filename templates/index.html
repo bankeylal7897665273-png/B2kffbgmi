@@ -2,196 +2,285 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI BG Remover Dashboard</title>
+    <title>Bankey BG API</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #f4f7f6; font-family: sans-serif; margin: 0; color: #333; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 10px auto; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; font-weight: bold; }
+        body { background-color: #0f172a; color: #fff; overflow-x: hidden; }
+        
+        /* Dark Glassmorphism Premium Theme */
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; }
+        .neon-text { color: #00f2fe; text-shadow: 0 0 10px rgba(0, 242, 254, 0.6); }
+        .neon-btn { background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%); color: #fff; border: none; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3); transition: 0.3s; }
+        .neon-btn:hover { box-shadow: 0 4px 25px rgba(0, 242, 254, 0.6); transform: scale(1.02); }
+        
+        button { width: 100%; padding: 16px; border-radius: 12px; font-size: 16px; cursor: pointer; position: relative; }
+        input { width: 100%; padding: 16px; background: #1e293b; border: 2px solid #334155; color: #fff; border-radius: 12px; margin-bottom: 15px; outline: none; }
+        input:focus { border-color: #00f2fe; }
+
+        /* Spinner (Gol Gol Ghumne Wala) */
+        .loader { border: 4px solid transparent; border-top: 4px solid #fff; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: none; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .card { background: #fff; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #007bff; color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        #app-page { display: none; padding: 20px; margin-top: 60px; }
-        .sidebar { position: fixed; left: -280px; top: 0; width: 260px; height: 100%; background: #fff; z-index: 1000; transition: 0.3s; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding-top: 60px; }
-        .sidebar.open { left: 0; }
-        .sidebar a { display: block; padding: 15px 25px; color: #444; text-decoration: none; font-weight: 600; border-bottom: 1px solid #f9f9f9; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .history-img { width: 100%; border-radius: 10px; margin-top: 10px; }
+        .btn-text.hidden { display: none; }
+        .loader.active { display: block; }
+
+        /* Popups */
+        #notify { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .popup { padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; background: #1e293b; animation: slideIn 0.3s ease; border-left: 5px solid; }
+        .popup.success { border-color: #10b981; color: #10b981; }
+        .popup.error { border-color: #ef4444; color: #ef4444; }
+        @keyframes slideIn { from{transform:translateX(100%);} to{transform:translateX(0);} }
+
+        /* Auth & App Layout */
+        #auth-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; position: absolute; width: 100%; background: #0f172a; z-index: 5000; }
+        .auth-box { width: 100%; max-width: 400px; padding: 40px 30px; text-align: center; }
+        
+        #app-page { display: none; padding-top: 80px; min-height: 100vh; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; background: #1e293b; position: fixed; top: 0; width: 100%; z-index: 1000; border-bottom: 1px solid #334155; }
+        .sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: #1e293b; z-index: 1500; transition: 0.3s; border-right: 1px solid #334155; padding-top: 70px; }
+        .sidebar.open { left: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
+        .sidebar a { display: block; padding: 18px 25px; color: #cbd5e1; text-decoration: none; border-bottom: 1px solid #334155; }
+        .sidebar a:hover { background: rgba(0, 242, 254, 0.1); color: #00f2fe; border-left: 4px solid #00f2fe; }
+
+        .tab-content { display: none; padding: 25px; }
+        .tab-content.active { display: block; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .stat-card { padding: 20px; text-align: center; border: 1px solid #334155; }
+        
+        .code-box { background: #000; padding: 20px; border-radius: 10px; color: #00f2fe; font-family: monospace; border: 1px solid #334155; margin-top: 15px; }
     </style>
 </head>
 <body>
     <script src="/static/script.js"></script>
+    <div id="notify"></div>
 
-    <div id="auth-page" style="display:flex; justify-content:center; align-items:center; height:100vh;">
-        <div class="card" style="width:340px; text-align:center;">
-            <h2 id="auth-title">Login</h2>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="pass" placeholder="Password">
-            <input type="password" id="repass" placeholder="Re-Password" style="display:none;">
-            <button onclick="handleAuth()" id="auth-btn">Login</button>
-            <div class="loader" id="auth-load"></div>
-            <p onclick="toggleAuthMode()" id="auth-toggle" style="color:#007bff; cursor:pointer; font-size:13px; margin-top:10px;">Create Account</p>
+    <div id="auth-page">
+        <div class="auth-box glass">
+            <h2 class="neon-text" style="font-size: 28px; margin-bottom: 30px;">Bankey BG API</h2>
+            
+            <div id="login-div">
+                <input type="email" id="log-em" placeholder="Email Address">
+                <input type="password" id="log-pw" placeholder="Password">
+                <button class="neon-btn" id="btn-login" onclick="login()"><span class="btn-text">Secure Login</span><div class="loader" id="ldr-login"></div></button>
+                <p style="margin-top:20px; color:#00f2fe; cursor:pointer;" onclick="toggleAuth('create')">Create New Account</p>
+            </div>
+
+            <div id="create-div" style="display:none;">
+                <input type="email" id="reg-em" placeholder="Email Address">
+                <input type="password" id="reg-pw" placeholder="Create Password">
+                <input type="password" id="reg-rpw" placeholder="Confirm Password">
+                <button class="neon-btn" id="btn-reg" onclick="register()"><span class="btn-text">Create Account</span><div class="loader" id="ldr-reg"></div></button>
+                <p style="margin-top:20px; color:#00f2fe; cursor:pointer;" onclick="toggleAuth('login')">Back to Login</p>
+            </div>
         </div>
     </div>
 
     <div id="app-page">
-        <div style="background:#fff; padding:15px; position:fixed; top:0; width:100%; left:0; box-shadow:0 2px 5px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center; z-index:900;">
-            <i class="fas fa-bars" onclick="document.getElementById('sidebar').classList.toggle('open')" style="cursor:pointer; margin-left:20px; font-size:20px;"></i>
-            <b style="color:#007bff;">AI Background Remover</b>
-            <div style="width:40px;"></div>
+        <div class="header">
+            <i class="fas fa-bars" onclick="document.getElementById('sidebar').classList.toggle('open')" style="font-size:24px; cursor:pointer;"></i>
+            <h3 class="neon-text">Bankey Workspace</h3>
+            <i class="fas fa-user-circle" style="font-size:24px; color:#cbd5e1;"></i>
         </div>
 
         <div class="sidebar" id="sidebar">
-            <a href="#" onclick="switchTab('dash')">📊 Dashboard</a>
-            <a href="#" onclick="switchTab('api')">🔑 My APIs</a>
-            <a href="#" onclick="switchTab('setup')">🤖 AI Setup Prompt</a>
-            <a href="#" onclick="switchTab('vip')">💎 Upgrade VIP</a>
-            <a href="#" onclick="switchTab('history')">📂 History</a>
-            <a href="#" onclick="auth.signOut()">Logout</a>
+            <i class="fas fa-times" onclick="document.getElementById('sidebar').classList.remove('open')" style="position:absolute; top:20px; right:20px; font-size:24px; cursor:pointer;"></i>
+            <a href="#" onclick="switchTab('dash')"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="#" onclick="switchTab('api')"><i class="fas fa-code"></i> Setup API</a>
+            <a href="#" onclick="switchTab('vip')"><i class="fas fa-crown"></i> Buy VIP Plan</a>
+            <a href="#" onclick="switchTab('setup')"><i class="fas fa-robot"></i> Dev AI Prompt</a>
+            <a href="#" onclick="auth.signOut()" style="color:#ef4444; margin-top:20px;"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
 
         <div id="dash" class="tab-content active">
-            <div class="card" id="welcome-msg">Welcome!</div>
-            <div class="stat-grid">
-                <div class="card" style="text-align:center;"><h5>Plan</h5><h3 id="plan-type">Free</h3></div>
-                <div class="card" style="text-align:center;"><h5>Requests</h5><h3 id="total-req">0</h3></div>
-            </div>
-        </div>
-
-        <div id="api" class="tab-content" style="display:none;">
-            <div class="card">
-                <h3>Create New API</h3>
-                <input type="text" id="api-un" placeholder="Enter Username">
-                <button onclick="createAPI()">Create API</button>
-            </div>
-            <div id="api-list"></div>
-        </div>
-
-        <div id="setup" class="tab-content" style="display:none;">
-            <div class="card">
-                <h3>AI Integration Prompt</h3>
-                <p style="font-size:12px; color:#666;">Copy this for ChatGPT/Gemini:</p>
-                <div id="p-text" style="background:#f9f9f9; padding:10px; font-size:11px; font-family:monospace;">
-                    Integrate Background Remover API. 
-                    URL: https://YOUR_DOMAIN/api/remove-bg/[USERNAME]?url=[IMG_URL]
-                    Rule: Hit GET request, it returns transparent PNG image. 
-                    Add loading spinner and error handling.
+            <h2 id="welcome-msg" style="margin-bottom:20px; color:#00f2fe;">Welcome!</h2>
+            <div class="grid">
+                <div class="stat-card glass" style="border-top: 4px solid #00f2fe;">
+                    <h4 style="color:#94a3b8;">Current Plan</h4>
+                    <h1 id="plan-txt" style="color:#00f2fe; margin-top:10px;">FREE</h1>
+                    <p style="font-size:12px; color:#cbd5e1; margin-top:5px;">Max 2 APIs</p>
                 </div>
-                <button onclick="copyP()" style="margin-top:10px;">Copy Prompt</button>
+                <div class="stat-card glass" style="border-top: 4px solid #10b981;">
+                    <h4 style="color:#94a3b8;">Total Success</h4>
+                    <h1 id="stat-s" style="color:#10b981; margin-top:10px;">0</h1>
+                    <p style="font-size:12px; color:#cbd5e1; margin-top:5px;">Images Processed</p>
+                </div>
+                <div class="stat-card glass" style="border-top: 4px solid #ef4444;">
+                    <h4 style="color:#94a3b8;">Total Rejected</h4>
+                    <h1 id="stat-r" style="color:#ef4444; margin-top:10px;">0</h1>
+                    <p style="font-size:12px; color:#cbd5e1; margin-top:5px;">Failed / Expired</p>
+                </div>
             </div>
         </div>
 
-        <div id="vip" class="tab-content" style="display:none;">
-            <div class="card" style="background:#007bff; color:#fff; text-align:center;">
-                <h2>VIP Membership</h2>
-                <p>₹20 for 1000 Limit/API + 30 Days Expiry</p>
-                <input type="text" id="v-utr" placeholder="Enter UTR" style="color:#333;">
-                <button onclick="requestVIP()" style="background:#fff; color:#007bff;">Submit Payment</button>
+        <div id="api" class="tab-content">
+            <h2>Create New API</h2>
+            <div class="glass" style="padding:20px; margin-top:20px;">
+                <p id="api-limit-txt" style="color:#ef4444; margin-bottom:15px;"></p>
+                <input type="text" id="api-un" placeholder="Enter Custom Username (e.g. bankey_app)">
+                <button class="neon-btn" id="btn-api" onclick="createAPI()"><span class="btn-text">Generate API Key</span><div class="loader" id="ldr-api"></div></button>
+            </div>
+            <h3 style="margin-top:30px;">Your Active APIs</h3>
+            <div id="api-list" style="margin-top:15px;"></div>
+        </div>
+
+        <div id="vip" class="tab-content">
+            <div class="glass" style="padding:30px; text-align:center; border:2px solid #00f2fe;">
+                <i class="fas fa-crown" style="font-size:50px; color:#00f2fe; margin-bottom:15px;"></i>
+                <h2>Unlock VIP Power</h2>
+                <p style="color:#cbd5e1; margin:15px 0;">Get 1000 Images limit per API.</p>
+                <h1 style="color:#10b981; margin-bottom:20px;">₹20 Only</h1>
+                <p style="color:#94a3b8; font-size:14px; margin-bottom:10px;">Pay via UPI: <b>bankey@upi</b></p>
+                <input type="number" id="v-utr" placeholder="Enter 12-Digit UTR Number">
+                <button class="neon-btn" onclick="buyVIP()">Submit Request</button>
             </div>
         </div>
 
-        <div id="history" class="tab-content" style="display:none;">
-            <h3>Success Images</h3>
-            <div id="hist-list"></div>
+        <div id="setup" class="tab-content">
+            <h2>AI Integration Prompt</h2>
+            <div class="code-box" id="prompt-txt">
+I am using Bankey BG API. Do not shorten my code.
+Integration Flow:
+1. When user uploads an image, get its direct URL.
+2. Make a GET request to:
+`https://YOUR_RENDER_URL/api/remove-bg/[MY_USERNAME]?url=[IMAGE_URL]`
+3. While it loads, show a spinning loader.
+4. The API will directly return a transparent PNG image. Display it to the user.
+5. If limit reaches, API returns JSON error. Handle that error.
+            </div>
+            <button class="neon-btn" style="margin-top:20px;" onclick="navigator.clipboard.writeText(document.getElementById('prompt-txt').innerText); showMsg('Prompt Copied!', 'success');">Copy Setup Prompt</button>
         </div>
     </div>
 
     <script>
-        let isLogin = true;
-        function toggleAuthMode() {
-            isLogin = !isLogin;
-            document.getElementById('auth-title').innerText = isLogin ? "Login" : "Sign Up";
-            document.getElementById('auth-btn').innerText = isLogin ? "Login" : "Create Account";
-            document.getElementById('repass').style.display = isLogin ? "none" : "block";
-            document.getElementById('auth-toggle').innerText = isLogin ? "Create Account" : "Back to Login";
+        function showMsg(m, t) {
+            const b = document.getElementById('notify');
+            const n = document.createElement('div'); n.className = `popup ${t}`; n.innerHTML = m;
+            b.appendChild(n); setTimeout(() => n.remove(), 4000);
         }
 
-        async function handleAuth() {
-            const e = document.getElementById('email').value, p = document.getElementById('pass').value;
-            document.getElementById('auth-load').style.display='block';
-            try {
-                if(isLogin) { await auth.signInWithEmailAndPassword(e, p); }
-                else { 
-                    const rp = document.getElementById('repass').value;
-                    if(p !== rp) throw new Error("Passwords mismatch!");
-                    await auth.createUserWithEmailAndPassword(e, p);
-                    alert("Welcome! Account created successfully.");
-                }
-            } catch(err) { alert(err.message); }
-            document.getElementById('auth-load').style.display='none';
+        function toggleAuth(type) {
+            document.getElementById('login-div').style.display = type === 'login' ? 'block' : 'none';
+            document.getElementById('create-div').style.display = type === 'create' ? 'block' : 'none';
+        }
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+            document.getElementById(t).classList.add('active');
+            document.getElementById('sidebar').classList.remove('open');
+        }
+
+        function btnLoad(id, state) {
+            const btn = document.getElementById(id);
+            if(state) { btn.disabled=true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.loader').classList.add('active'); }
+            else { btn.disabled=false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.loader').classList.remove('active'); }
         }
 
         auth.onAuthStateChanged(async user => {
             if(user) {
-                document.getElementById('auth-page').style.display='none';
-                document.getElementById('app-page').style.display='block';
                 const ref = db.ref(`${DB_ROOT}/users/${user.uid}`);
                 const snap = await ref.once('value');
-                if(!snap.exists()) { await ref.set({email:user.email, is_vip:false, api_count:0, created_at:Date.now()}); }
-                loadDashboard(user.uid);
+                if(!snap.exists()) { await ref.set({email: user.email, is_vip: false, api_count: 0}); }
+                
+                document.getElementById('auth-page').style.display = 'none';
+                document.getElementById('app-page').style.display = 'block';
+                showMsg('Welcome to Bankey BG API!', 'success');
+                loadData(user.uid);
             } else {
-                document.getElementById('auth-page').style.display='flex';
-                document.getElementById('app-page').style.display='none';
+                document.getElementById('auth-page').style.display = 'flex';
+                document.getElementById('app-page').style.display = 'none';
             }
         });
 
-        function switchTab(t) {
-            document.querySelectorAll('.tab-content').forEach(x => x.style.display='none');
-            document.getElementById(t).style.display='block';
-            document.getElementById('sidebar').classList.remove('open');
+        async function login() {
+            const e = document.getElementById('log-em').value, p = document.getElementById('log-pw').value;
+            btnLoad('btn-login', true);
+            try { await auth.signInWithEmailAndPassword(e, p); } catch(err) { showMsg('Wrong Email or Password', 'error'); }
+            btnLoad('btn-login', false);
+        }
+
+        async function register() {
+            const e = document.getElementById('reg-em').value, p = document.getElementById('reg-pw').value, rp = document.getElementById('reg-rpw').value;
+            if(p !== rp) return showMsg('Passwords do not match!', 'error');
+            btnLoad('btn-reg', true);
+            try { 
+                await auth.createUserWithEmailAndPassword(e, p); 
+                showMsg('Create account successful!', 'success');
+            } catch(err) { showMsg(err.message, 'error'); }
+            btnLoad('btn-reg', false);
         }
 
         async function createAPI() {
             const un = document.getElementById('api-un').value.trim();
-            if(!un) return alert("Enter name!");
+            if(!un) return showMsg('Enter Username', 'error');
+            
+            btnLoad('btn-api', true);
             const uid = auth.currentUser.uid;
             const uRef = db.ref(`${DB_ROOT}/users/${uid}`);
             const user = (await uRef.once('value')).val();
             
-            const limit = user.is_vip ? 4 : 2;
-            if(user.api_count >= limit) return alert("Limit reached! Upgrade for more.");
+            if(user.api_count >= 2) {
+                btnLoad('btn-api', false);
+                return showMsg('Max 2 APIs allowed! Delete old or buy VIP to renew limit.', 'error');
+            }
 
             const check = await db.ref(`${DB_ROOT}/apis/${un}`).once('value');
-            if(check.exists()) return alert("Username taken!");
+            if(check.exists()) { btnLoad('btn-api', false); return showMsg('Username taken by someone else!', 'error'); }
 
-            await db.ref(`${DB_ROOT}/apis/${un}`).set({
-                uid: uid, usage: 0, created_at: Date.now(), type: user.is_vip ? "VIP" : "FREE"
-            });
+            await db.ref(`${DB_ROOT}/apis/${un}`).set({ uid: uid, usage: 0 });
             await uRef.update({api_count: user.api_count + 1});
-            alert("API Created! 1000 limit applied.");
-            loadDashboard(uid);
+            
+            document.getElementById('api-un').value = '';
+            btnLoad('btn-api', false);
+            showMsg('API Created Successfully!', 'success');
         }
 
-        function loadDashboard(uid) {
+        function loadData(uid) {
             db.ref(`${DB_ROOT}/users/${uid}`).on('value', s => {
                 const d = s.val();
-                document.getElementById('welcome-msg').innerText = `Welcome, ${d.email}`;
-                document.getElementById('plan-type').innerText = d.is_vip ? "VIP Member" : "Free Plan";
-                document.getElementById('total-req').innerText = d.api_count;
+                document.getElementById('welcome-msg').innerText = `Welcome, ${d.email.split('@')[0]}`;
+                document.getElementById('plan-txt').innerText = d.is_vip ? "VIP PLAN" : "FREE PLAN";
+                document.getElementById('plan-txt').style.color = d.is_vip ? "#00f2fe" : "#cbd5e1";
+                document.getElementById('api-limit-txt').innerText = `You have created ${d.api_count}/2 APIs.`;
+                
+                const stats = d.stats || {success: 0, reject: 0};
+                document.getElementById('stat-s').innerText = stats.success;
+                document.getElementById('stat-r').innerText = stats.reject;
             });
+
+            const BASE = window.location.origin;
             db.ref(`${DB_ROOT}/apis`).orderByChild('uid').equalTo(uid).on('value', s => {
                 const list = document.getElementById('api-list'); list.innerHTML = '';
                 s.forEach(c => {
-                    list.innerHTML += `<div class="card"><b>ID: ${c.key}</b><br><small>${window.location.origin}/api/remove-bg/${c.key}?url=...</small><br>Usage: ${c.val().usage}</div>`;
-                });
-            });
-            db.ref(`${DB_ROOT}/users/${uid}/history`).limitToLast(5).on('value', s => {
-                const h = document.getElementById('hist-list'); h.innerHTML = '';
-                s.forEach(c => {
-                    if(c.val().status === 'success') h.innerHTML += `<img src="${c.val().url}" class="history-img">`;
+                    const usage = c.val().usage || 0;
+                    list.innerHTML += `
+                        <div class="glass" style="padding:15px; margin-bottom:15px; border-left: 4px solid #00f2fe;">
+                            <h3 style="color:#00f2fe;">ID: ${c.key}</h3>
+                            <p style="font-size:12px; color:#cbd5e1; margin-top:5px;">Usage: ${usage} Images processed</p>
+                            <div class="code-box" style="font-size:12px; padding:10px;">${BASE}/api/remove-bg/${c.key}?url=[IMG_LINK]</div>
+                            <button style="background:#ef4444; margin-top:10px; padding:10px; width:auto; font-size:12px; color:#fff;" onclick="deleteAPI('${c.key}')"><i class="fas fa-trash"></i> Delete to free slot</button>
+                        </div>`;
                 });
             });
         }
 
-        function copyP() { navigator.clipboard.writeText(document.getElementById('p-text').innerText); alert("Copied!"); }
-        async function requestVIP() {
+        async function deleteAPI(id) {
+            if(!confirm("Delete this API?")) return;
+            await db.ref(`${DB_ROOT}/apis/${id}`).remove();
+            const uRef = db.ref(`${DB_ROOT}/users/${auth.currentUser.uid}`);
+            const user = (await uRef.once('value')).val();
+            await uRef.update({api_count: user.api_count - 1});
+            showMsg('API Deleted!', 'success');
+        }
+
+        async function buyVIP() {
             const utr = document.getElementById('v-utr').value;
-            if(utr.length < 12) return alert("Invalid UTR");
-            await db.ref(`${DB_ROOT}/vip_requests/${auth.currentUser.uid}`).set({utr:utr, status:'pending'});
-            alert("Sent to admin!");
+            if(utr.length < 12) return showMsg('Enter 12 Digit UTR', 'error');
+            await db.ref(`${DB_ROOT}/vip_req/${auth.currentUser.uid}`).set({utr: utr, email: auth.currentUser.email});
+            showMsg('Request sent to Admin!', 'success');
+            document.getElementById('v-utr').value = '';
         }
     </script>
 </body>
