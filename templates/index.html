@@ -50,7 +50,7 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
         .stat-card { padding: 20px; text-align: center; border: 1px solid #334155; }
         
-        .code-box { background: #000; padding: 20px; border-radius: 10px; color: #00f2fe; font-family: monospace; border: 1px solid #334155; margin-top: 15px; }
+        .code-box { background: #000; padding: 20px; border-radius: 10px; color: #00f2fe; font-family: monospace; border: 1px solid #334155; margin-top: 15px; white-space: pre-wrap;}
     </style>
 </head>
 <body>
@@ -142,13 +142,15 @@
             <h2>AI Integration Prompt</h2>
             <div class="code-box" id="prompt-txt">
 I am using Bankey BG API. Do not shorten my code.
+This API supports direct image FILE UPLOADS.
+
 Integration Flow:
-1. When user uploads an image, get its direct URL.
-2. Make a GET request to:
-`https://YOUR_RENDER_URL/api/remove-bg/[MY_USERNAME]?url=[IMAGE_URL]`
-3. While it loads, show a spinning loader.
-4. The API will directly return a transparent PNG image. Display it to the user.
-5. If limit reaches, API returns JSON error. Handle that error.
+1. Create a form with file input to select an image.
+2. When user uploads an image, make a POST request to:
+`https://YOUR_RENDER_URL/api/remove-bg/[MY_USERNAME]`
+3. Send the image file as `multipart/form-data` with the key name `image`.
+4. While it loads, show a spinning loader.
+5. The API will directly return a transparent PNG image. Display it.
             </div>
             <button class="neon-btn" style="margin-top:20px;" onclick="navigator.clipboard.writeText(document.getElementById('prompt-txt').innerText); showMsg('Prompt Copied!', 'success');">Copy Setup Prompt</button>
         </div>
@@ -259,7 +261,8 @@ Integration Flow:
                         <div class="glass" style="padding:15px; margin-bottom:15px; border-left: 4px solid #00f2fe;">
                             <h3 style="color:#00f2fe;">ID: ${c.key}</h3>
                             <p style="font-size:12px; color:#cbd5e1; margin-top:5px;">Usage: ${usage} Images processed</p>
-                            <div class="code-box" style="font-size:12px; padding:10px;">${BASE}/api/remove-bg/${c.key}?url=[IMG_LINK]</div>
+                            <div class="code-box" style="font-size:12px; padding:10px;">${BASE}/api/remove-bg/${c.key}</div>
+                            <p style="font-size:11px; color:#10b981; margin-top:8px;">✅ Supports POST File Upload & GET ?url=</p>
                             <button style="background:#ef4444; margin-top:10px; padding:10px; width:auto; font-size:12px; color:#fff;" onclick="deleteAPI('${c.key}')"><i class="fas fa-trash"></i> Delete to free slot</button>
                         </div>`;
                 });
